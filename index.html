@@ -102,17 +102,21 @@
   .entry-row:first-child{ border-top:none; }
   .entry-row.scratched{ opacity:.5; }
   .entry-head{ display:flex; align-items:center; gap:7px; }
-  .entry-head .post{
-    font-family:'IBM Plex Mono', monospace; font-size:11.5px; color: var(--ink); background: var(--tote-amber);
-    border-radius:4px; min-width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center;
-    padding:0 4px; font-weight:600;
+  .pp-badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:20px; height:20px; border-radius:4px; border:1px solid rgba(0,0,0,0.35);
+    font-weight:700; font-size:11px; line-height:1; font-family:'IBM Plex Mono', monospace;
+    flex-shrink:0;
   }
   .entry-head .name{ font-weight:600; font-size:13.5px; }
   .entry-head .scr-tag{
     font-family:'IBM Plex Mono', monospace; font-size:10px; color: var(--silk-red); border:1px solid var(--silk-red);
     border-radius:3px; padding:1px 4px;
   }
-  .entry-row .meta{ font-size:11.5px; color: var(--parchment-dim); margin:3px 0 6px; }
+  .entry-row .meta{ font-size:11.5px; color: var(--parchment-dim); margin:3px 0 7px; }
+  .entry-row .note-toggle{ font-size:11.5px; padding:4px 10px; }
+  .entry-row .note-toggle.has-note{ border-color: var(--rail-green); color: var(--rail-green); }
+  .entry-row .note-box{ margin-top:8px; }
   .entry-row textarea{
     width:100%; background: var(--panel-2); color: var(--parchment); border:1px solid var(--panel-border);
     border-radius:6px; padding:7px; font-family:'IBM Plex Sans', sans-serif; font-size:13px; min-height:50px; resize:vertical;
@@ -247,6 +251,31 @@
     const div = document.createElement("div");
     div.textContent = str ?? "";
     return div.innerHTML;
+  }
+
+  // Standard North American saddlecloth colors by post position (the
+  // NTRA-standard chart) — same table the Command Center uses for its own
+  // entries badges, copied here rather than shared since the two repos
+  // stay independent. Posts past 12 fall back to plain text.
+  const SADDLECLOTH_COLORS = {
+    1: { bg: "#e21f26", fg: "#ffffff" },
+    2: { bg: "#ffffff", fg: "#000000" },
+    3: { bg: "#1c4faa", fg: "#ffffff" },
+    4: { bg: "#ffd400", fg: "#000000" },
+    5: { bg: "#1a7a3c", fg: "#ffffff" },
+    6: { bg: "#000000", fg: "#ffd400" },
+    7: { bg: "#f7941d", fg: "#000000" },
+    8: { bg: "#f2a7c3", fg: "#000000" },
+    9: { bg: "#40e0d0", fg: "#000000" },
+    10: { bg: "#7b2d8e", fg: "#ffffff" },
+    11: { bg: "#9a9a9a", fg: "#c1272d" },
+    12: { bg: "#9acd32", fg: "#000000" },
+  };
+  function ppBadgeHtml(postPosition){
+    const n = parseInt(postPosition, 10);
+    const colors = SADDLECLOTH_COLORS[n];
+    if (!colors) return escapeHtml(postPosition || "—");
+    return `<span class="pp-badge" style="background:${colors.bg}; color:${colors.fg};">${n}</span>`;
   }
 
   function buildVideo(src){
@@ -425,18 +454,24 @@
     if (currentHorses.length){
       ppFallback.hidden = true;
       entriesWrap.hidden = false;
-      entriesWrap.innerHTML = currentHorses.map(h => `
+      entriesWrap.innerHTML = currentHorses.map(h => {
+        const hasNote = !!(currentNotes[h.name] && currentNotes[h.name].trim());
+        return `
         <div class="entry-row${h.scratched ? " scratched" : ""}">
           <div class="entry-head">
-            <span class="post">${escapeHtml(h.postPosition || "")}</span>
+            ${ppBadgeHtml(h.postPosition)}
             <span class="name">${escapeHtml(h.name || "—")}</span>
             ${h.scratched ? '<span class="scr-tag">SCR</span>' : ""}
           </div>
           <div class="meta">${escapeHtml(h.jockey || "—")} &bull; ${escapeHtml(h.trainer || "—")}</div>
-          <textarea class="entry-note" data-horse="${escapeHtml(h.name || "")}" placeholder="Trip note...">${escapeHtml(currentNotes[h.name] || "")}</textarea>
-          <button class="entry-save" data-horse="${escapeHtml(h.name || "")}">Save</button>
+          <button type="button" class="note-toggle${hasNote ? " has-note" : ""}" data-horse="${escapeHtml(h.name || "")}">${hasNote ? "Note ✓" : "+ Note"}</button>
+          <div class="note-box" hidden>
+            <textarea class="entry-note" placeholder="Trip note...">${escapeHtml(currentNotes[h.name] || "")}</textarea>
+            <button type="button" class="entry-save" data-horse="${escapeHtml(h.name || "")}">Save</button>
+          </div>
         </div>
-      `).join("");
+      `;
+      }).join("");
     } else {
       entriesWrap.hidden = true;
       ppFallback.hidden = false;
@@ -445,12 +480,21 @@
   }
 
   entriesWrap.addEventListener("click", async (e) => {
+    if (e.target.classList.contains("note-toggle")){
+      const box = e.target.closest(".entry-row").querySelector(".note-box");
+      box.hidden = !box.hidden;
+      return;
+    }
     if (!e.target.classList.contains("entry-save")) return;
     const horse = e.target.dataset.horse;
     const row = e.target.closest(".entry-row");
     const textarea = row.querySelector(".entry-note");
-    const ok = await saveNote(horse, textarea.value.trim());
+    const noteText = textarea.value.trim();
+    const ok = await saveNote(horse, noteText);
     if (ok){
+      const toggle = row.querySelector(".note-toggle");
+      toggle.classList.toggle("has-note", !!noteText);
+      toggle.textContent = noteText ? "Note ✓" : "+ Note";
       const existingTag = row.querySelector(".entry-saved-tag");
       if (existingTag) existingTag.remove();
       const tag = document.createElement("span");
