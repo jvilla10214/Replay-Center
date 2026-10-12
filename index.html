@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Replay Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #000000;
+    --panel: #141414;
+    --panel-2: #1e1e1e;
+    --panel-border: #2f2f2f;
+    --parchment: #ede6d3;
+    --parchment-dim: #a9a496;
+    --tote-amber: #f0b429;
+    --rail-green: #4caf7d;
+    --silk-red: #b3473b;
+    --sky: #6fa8c9;
+    --radius: 10px;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0; background: var(--ink); color: var(--parchment);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+  }
+  header{
+    padding: 18px 22px 14px; border-bottom: 1px solid var(--panel-border);
+    display:flex; flex-wrap:wrap; align-items:center; gap:18px;
+  }
+  h1{
+    font-family:'Oswald', sans-serif; font-weight:700; letter-spacing:1px;
+    font-size: 22px; margin:0; color: var(--tote-amber); text-transform:uppercase;
+  }
+  .picker{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .picker select, .picker input[type=date], .picker input[type=number]{
+    background: var(--panel-2); color: var(--parchment); border:1px solid var(--panel-border);
+    border-radius:6px; padding:7px 10px; font-family:'IBM Plex Mono', monospace; font-size:13px;
+  }
+  .picker input[type=number]{ width:64px; }
+  button{
+    background: var(--panel-2); color: var(--parchment); border:1px solid var(--panel-border);
+    border-radius:6px; padding:7px 14px; font-family:'IBM Plex Mono', monospace; font-size:12.5px;
+    cursor:pointer; letter-spacing:.3px;
+  }
+  button:hover{ border-color: var(--tote-amber); color: var(--tote-amber); }
+  button.primary{ background: var(--tote-amber); color:#201603; border-color: var(--tote-amber); font-weight:600; }
+  button.primary:hover{ color:#201603; opacity:.9; }
+  button.active{ border-color: var(--rail-green); color: var(--rail-green); }
+  main{ display:flex; flex-wrap:wrap; gap:16px; padding:16px 22px 40px; align-items:flex-start; }
+  .replay-col{ flex: 1 1 640px; min-width:320px; }
+  .notes-col{ flex: 0 1 320px; min-width:280px; }
+  .videos{ display:flex; gap:10px; flex-wrap:wrap; }
+  .video-panel{
+    flex:1 1 300px; background: var(--panel); border:1px solid var(--panel-border);
+    border-radius: var(--radius); overflow:hidden;
+  }
+  .video-panel .label{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:1.5px;
+    color: var(--parchment-dim); padding:8px 10px; border-bottom:1px solid var(--panel-border);
+    text-transform:uppercase;
+  }
+  video{ width:100%; display:block; background:#000; max-height: 360px; }
+  .video-panel .empty{ padding: 60px 14px; text-align:center; color: var(--parchment-dim); font-size:13px; }
+  .sync-bar{
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px;
+    padding:10px; background: var(--panel); border:1px solid var(--panel-border); border-radius: var(--radius);
+  }
+  .sync-bar .offset{ font-family:'IBM Plex Mono', monospace; font-size:12.5px; color: var(--sky); min-width:92px; text-align:center; }
+  .status{ font-family:'IBM Plex Mono', monospace; font-size:12px; color: var(--parchment-dim); margin-top:8px; min-height:16px; }
+  .status.error{ color: var(--silk-red); }
+  .notes-col{
+    background: var(--panel); border:1px solid var(--panel-border); border-radius: var(--radius); padding:14px;
+  }
+  .notes-col h2{
+    font-family:'Oswald', sans-serif; font-size:15px; margin:0 0 10px; color: var(--tote-amber);
+    text-transform:uppercase; letter-spacing:.5px;
+  }
+  .notes-col input[type=text], .notes-col textarea{
+    width:100%; background: var(--panel-2); color: var(--parchment); border:1px solid var(--panel-border);
+    border-radius:6px; padding:8px; font-family:'IBM Plex Sans', sans-serif; font-size:13.5px; margin-bottom:8px;
+  }
+  .notes-col textarea{ min-height:80px; resize:vertical; }
+  .saved-note{
+    border-top:1px solid var(--panel-border); padding:9px 0; font-size:13px;
+  }
+  .saved-note .horse{ font-weight:600; color: var(--rail-green); font-family:'IBM Plex Mono', monospace; font-size:12px; }
+  .saved-note .text{ margin-top:3px; white-space:pre-wrap; color: var(--parchment); }
+  .settings{
+    margin-top:14px; padding-top:12px; border-top:1px solid var(--panel-border);
+  }
+  .settings label{ font-size:11px; color: var(--parchment-dim); display:block; margin-bottom:4px; font-family:'IBM Plex Mono', monospace; }
+  .settings input[type=text]{
+    width:100%; background: var(--panel-2); color: var(--parchment); border:1px solid var(--panel-border);
+    border-radius:6px; padding:7px; font-family:'IBM Plex Mono', monospace; font-size:12px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Replay Center</h1>
+  <div class="picker">
+    <select id="trackSelect">
+      <option value="belmont">Belmont</option>
+      <option value="saratoga">Saratoga</option>
+    </select>
+    <input type="date" id="daySelect">
+    <input type="number" id="raceSelect" min="1" max="14" value="1">
+    <button class="primary" id="loadBtn">Load Replay</button>
+  </div>
+</header>
+
+<main>
+  <div class="replay-col">
+    <div class="videos">
+      <div class="video-panel">
+        <div class="label">Pan</div>
+        <div id="panWrap"><div class="empty">No replay loaded</div></div>
+      </div>
+      <div class="video-panel">
+        <div class="label">Head-On</div>
+        <div id="headonWrap"><div class="empty">No replay loaded</div></div>
+      </div>
+    </div>
+    <div class="sync-bar">
+      <button id="syncToggle">Lock Sync: Off</button>
+      <button id="nudgeBack">Head-On &minus;0.5s</button>
+      <span class="offset" id="offsetLabel">offset: 0.0s</span>
+      <button id="nudgeFwd">Head-On +0.5s</button>
+      <button id="resetOffset">Reset Offset</button>
+    </div>
+    <div class="status" id="statusLine"></div>
+  </div>
+
+  <div class="notes-col">
+    <h2>Trip Notes</h2>
+    <input type="text" id="horseInput" placeholder="Horse name or PP #">
+    <textarea id="noteInput" placeholder="Trip note..."></textarea>
+    <button class="primary" id="saveNoteBtn">Save Note</button>
+    <div id="notesList"></div>
+
+    <div class="settings">
+      <label>Replay Center Worker URL</label>
+      <input type="text" id="workerUrlInput" placeholder="https://replay-center.YOURNAME.workers.dev/">
+      <button id="saveWorkerUrlBtn" style="margin-top:6px;">Save</button>
+    </div>
+  </div>
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  const WORKER_URL_KEY = "replay_center_worker_url_v1";
+
+  function loadWorkerUrl(){
+    try { return localStorage.getItem(WORKER_URL_KEY) || ""; }
+    catch(e){ return ""; }
+  }
+  function saveWorkerUrl(url){
+    try { localStorage.setItem(WORKER_URL_KEY, url); } catch(e){}
+  }
+  function apiUrl(path){
+    const base = loadWorkerUrl().replace(/\/$/, "");
+    return base + path;
+  }
+
+  const trackSelect = document.getElementById("trackSelect");
+  const daySelect = document.getElementById("daySelect");
+  const raceSelect = document.getElementById("raceSelect");
+  const loadBtn = document.getElementById("loadBtn");
+  const panWrap = document.getElementById("panWrap");
+  const headonWrap = document.getElementById("headonWrap");
+  const statusLine = document.getElementById("statusLine");
+  const syncToggle = document.getElementById("syncToggle");
+  const nudgeBack = document.getElementById("nudgeBack");
+  const nudgeFwd = document.getElementById("nudgeFwd");
+  const resetOffset = document.getElementById("resetOffset");
+  const offsetLabel = document.getElementById("offsetLabel");
+  const horseInput = document.getElementById("horseInput");
+  const noteInput = document.getElementById("noteInput");
+  const saveNoteBtn = document.getElementById("saveNoteBtn");
+  const notesList = document.getElementById("notesList");
+  const workerUrlInput = document.getElementById("workerUrlInput");
+  const saveWorkerUrlBtn = document.getElementById("saveWorkerUrlBtn");
+
+  let panVideo = null;
+  let headonVideo = null;
+  let syncLocked = false;
+  let offsetSeconds = 0; // added to pan's currentTime to get headon's target time
+  let syncing = false; // re-entrancy guard while programmatically setting currentTime
+
+  function todayStr(){
+    const d = new Date();
+    return d.toISOString().slice(0,10);
+  }
+  daySelect.value = todayStr();
+
+  function setStatus(msg, isError){
+    statusLine.textContent = msg || "";
+    statusLine.classList.toggle("error", !!isError);
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement("div");
+    div.textContent = str ?? "";
+    return div.innerHTML;
+  }
+
+  function buildVideo(src){
+    const v = document.createElement("video");
+    v.src = src;
+    v.controls = true;
+    v.preload = "metadata";
+    return v;
+  }
+
+  function wireSync(leader, follower){
+    leader.addEventListener("play", () => {
+      if (!syncLocked) return;
+      follower.currentTime = leader.currentTime + offsetSeconds;
+      follower.play().catch(()=>{});
+    });
+    leader.addEventListener("pause", () => {
+      if (!syncLocked) return;
+      follower.pause();
+    });
+    leader.addEventListener("seeked", () => {
+      if (!syncLocked || syncing) return;
+      syncing = true;
+      follower.currentTime = leader.currentTime + offsetSeconds;
+      setTimeout(() => { syncing = false; }, 50);
+    });
+    leader.addEventListener("timeupdate", () => {
+      if (!syncLocked || syncing) return;
+      const target = leader.currentTime + offsetSeconds;
+      if (Math.abs(follower.currentTime - target) > 0.35) {
+        follower.currentTime = target;
+      }
+    });
+  }
+
+  async function loadReplay(){
+    const track = trackSelect.value;
+    const day = daySelect.value;
+    const race = raceSelect.value;
+    if (!day || !race){
+      setStatus("Pick a date and race number.", true);
+      return;
+    }
+    if (!loadWorkerUrl()){
+      setStatus("Set the Replay Center Worker URL below first.", true);
+      return;
+    }
+    setStatus("Resolving replay...");
+    panWrap.innerHTML = '<div class="empty">Loading...</div>';
+    headonWrap.innerHTML = '<div class="empty">Loading...</div>';
+
+    try{
+      const res = await fetch(apiUrl(`/replay-urls?track=${encodeURIComponent(track)}&day=${encodeURIComponent(day)}&race=${encodeURIComponent(race)}`), { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
+
+      panVideo = buildVideo(data.panUrl);
+      headonVideo = buildVideo(data.headonUrl);
+      panWrap.innerHTML = "";
+      headonWrap.innerHTML = "";
+      panWrap.appendChild(panVideo);
+      headonWrap.appendChild(headonVideo);
+
+      offsetSeconds = 0;
+      offsetLabel.textContent = "offset: 0.0s";
+      wireSync(panVideo, headonVideo);
+
+      setStatus(`Loaded ${track} ${day} race ${race}.`);
+      loadNotes();
+    } catch(err){
+      panWrap.innerHTML = '<div class="empty">Failed to load</div>';
+      headonWrap.innerHTML = '<div class="empty">Failed to load</div>';
+      setStatus("Error: " + err.message, true);
+    }
+  }
+
+  syncToggle.addEventListener("click", () => {
+    syncLocked = !syncLocked;
+    syncToggle.textContent = "Lock Sync: " + (syncLocked ? "On" : "Off");
+    syncToggle.classList.toggle("active", syncLocked);
+  });
+  nudgeBack.addEventListener("click", () => {
+    offsetSeconds -= 0.5;
+    offsetLabel.textContent = "offset: " + offsetSeconds.toFixed(1) + "s";
+  });
+  nudgeFwd.addEventListener("click", () => {
+    offsetSeconds += 0.5;
+    offsetLabel.textContent = "offset: " + offsetSeconds.toFixed(1) + "s";
+  });
+  resetOffset.addEventListener("click", () => {
+    offsetSeconds = 0;
+    offsetLabel.textContent = "offset: 0.0s";
+  });
+
+  async function loadNotes(){
+    if (!loadWorkerUrl()) return;
+    const track = trackSelect.value, day = daySelect.value, race = raceSelect.value;
+    try{
+      const res = await fetch(apiUrl(`/notes?track=${encodeURIComponent(track)}&day=${encodeURIComponent(day)}&race=${encodeURIComponent(race)}`), { cache: "no-store" });
+      const data = await res.json();
+      renderNotes(data.notes || {});
+    } catch(err){
+      notesList.innerHTML = "";
+    }
+  }
+
+  function renderNotes(notes){
+    const keys = Object.keys(notes).sort();
+    if (!keys.length){
+      notesList.innerHTML = '<div style="color:var(--parchment-dim); font-size:12.5px; padding-top:8px;">No notes yet.</div>';
+      return;
+    }
+    notesList.innerHTML = keys.map(horse => `
+      <div class="saved-note">
+        <div class="horse">${escapeHtml(horse)}</div>
+        <div class="text">${escapeHtml(notes[horse])}</div>
+      </div>
+    `).join("");
+  }
+
+  saveNoteBtn.addEventListener("click", async () => {
+    const horse = horseInput.value.trim();
+    const note = noteInput.value.trim();
+    if (!horse || !note){
+      setStatus("Enter a horse and a note before saving.", true);
+      return;
+    }
+    if (!loadWorkerUrl()){
+      setStatus("Set the Replay Center Worker URL below first.", true);
+      return;
+    }
+    const track = trackSelect.value, day = daySelect.value, race = raceSelect.value;
+    try{
+      const res = await fetch(apiUrl(`/notes?track=${encodeURIComponent(track)}&day=${encodeURIComponent(day)}&race=${encodeURIComponent(race)}`), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ horse, note })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
+      noteInput.value = "";
+      loadNotes();
+    } catch(err){
+      setStatus("Error saving note: " + err.message, true);
+    }
+  });
+
+  workerUrlInput.value = loadWorkerUrl();
+  saveWorkerUrlBtn.addEventListener("click", () => {
+    saveWorkerUrl(workerUrlInput.value.trim());
+    setStatus("Worker URL saved.");
+  });
+
+  loadBtn.addEventListener("click", loadReplay);
+})();
+</script>
+</body>
+</html>
