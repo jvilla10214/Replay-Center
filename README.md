@@ -2,7 +2,7 @@
 
 Internal tool: watch a race's Pan and Head-On replay side by side, synced, with a
 trip-notes panel. Built for Mark's DRF Formulator workflow, but pulls video from
-NYRA's own public replays pages (Belmont, Saratoga, Aqueduct) instead — no login, no
+NYRA's own public replays pages (Belmont + Saratoga) instead — no login, no
 bot-detection wall, no video hosting required.
 
 Two independent pieces, same pattern as GiddyUpBets Command Center:
@@ -28,7 +28,7 @@ Deploy is manual, same as the Command Center's Worker:
 
 ### Routes
 
-- `GET /replay-urls?track=belmont|saratoga|aqueduct&day=YYYY-MM-DD&race=N` — resolves NYRA's
+- `GET /replay-urls?track=belmont|saratoga&day=YYYY-MM-DD&race=N` — resolves NYRA's
   public replay page for that race, extracts the pan/head-on filenames NYRA
   renders server-side, and resolves each to a signed (time-limited) playable
   video URL via NYRA's own public `/rcn/video/` endpoint. Nothing is downloaded

@@ -1,6 +1,6 @@
 // Replay Center Worker
 //
-// 1. GET /replay-urls?track=belmont|saratoga|aqueduct&day=YYYY-MM-DD&race=N
+// 1. GET /replay-urls?track=belmont|saratoga&day=YYYY-MM-DD&race=N
 //    Resolves NYRA's public (no-login) replay page for a given track/day/race,
 //    extracts the pan + head-on replay filenames NYRA renders server-side, then
 //    resolves each to a signed, playable video URL via NYRA's own public
@@ -15,7 +15,6 @@
 const TRACK_SLUGS = {
   belmont: "belmont",
   saratoga: "saratoga",
-  aqueduct: "aqueduct",
 };
 
 function corsHeaders(extra = {}) {
